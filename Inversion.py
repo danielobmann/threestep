@@ -130,8 +130,8 @@ out = tf.identity(out, name='output_upsample')
 
 n_primal, n_dual, n_iter = 5, 5, 5
 
-input_x = tf.placeholder(tf.float32, shape=(None, size, size, 1), name='input_x')
 input_y = tf.placeholder(tf.float32, shape=(None, n_theta*upsampling_factor, n_s, 1), name='input_y')
+input_x = tf.placeholder(tf.float32, shape=(None, size, size, 1), name='input_x')
 
 
 def apply_conv(inputs, filters=32):
@@ -275,6 +275,7 @@ for i in range(epochs):
         y_in, x_out = data_generator_inversion(batch_size=batch_size, mode='train')
 
         fd = {input_y: y_in,
+              input_x: np.zeros((batch_size, size, size, 1)),
               x_true: x_out,
               learning_rate: cosine_decay(i, epochs)}
 
@@ -295,6 +296,7 @@ for i in range(epochs):
             y_in, x_out = data_generator_inversion(batch_size=batch_size, mode='train')
 
             fd = {input_y: y_in,
+                  input_x: np.zeros((batch_size, size, size, 1)),
                   x_true: x_out,
                   learning_rate: cosine_decay(i, epochs)}
 
@@ -311,10 +313,11 @@ for i in range(epochs):
         y_in, x_out = data_generator_inversion(batch_size=batch_size, mode='train')
 
         fd = {input_y: y_in,
+              input_x: np.zeros((batch_size, size, size, 1)),
               x_true: x_out,
               learning_rate: cosine_decay(i, epochs)}
 
-        x_pred = sess.run(out, feed_dict=fd)
+        x_pred = sess.run(output, feed_dict=fd)
         plot_validation(x_pred, x_out, epoch=i)
 
     # Save model every

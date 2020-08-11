@@ -203,6 +203,7 @@ inp_up = tf.get_default_graph().get_tensor_by_name("input_upsample:0")
 out_up = tf.get_default_graph().get_tensor_by_name("output_upsample:0")
 
 inp_inversion = tf.get_default_graph().get_tensor_by_name("input_y:0")
+inp_x = tf.get_default_graph().get_tensor_by_name("input_x:0")
 out_inversion = tf.get_default_graph().get_tensor_by_name("output_inversion:0")
 
 
@@ -237,7 +238,7 @@ for file in os.listdir(path):
 
     y_d = sess.run(out_denois, feed_dict={inp_denois: y_n})
     y_u = sess.run(out_up, feed_dict={inp_up: y_d})
-    x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_u})
+    x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_u, inp_x: np.zeros((1, size, size, 1))})
     x_rec = x_rec[0, ..., 0]
 
     NMSE.append(nmse(x, x_rec))
@@ -249,7 +250,7 @@ for file in os.listdir(path):
     plt.title('True')
 
     plt.subplot(222)
-    plt.imshow(pseudoinverse(y_n), cmap='bone')
+    plt.imshow(pseudoinverse(y_n[0, ..., 0]), cmap='bone')
     plt.axis('off')
     plt.title('FBP')
 
@@ -261,9 +262,10 @@ for file in os.listdir(path):
     plt.subplot(224)
     plt.imshow(np.abs(x - x_rec), cmap='bone')
     plt.axis('off')
-    plt.title('FBP')
+    plt.colorbar()
+    plt.title('Difference')
 
-    plt.savefig("images/test/" + file[-8:] + '.pdf', format='pdf')
+    plt.savefig("images/test/" + file[0:-8] + '.pdf', format='pdf')
     plt.clf()
 
 
