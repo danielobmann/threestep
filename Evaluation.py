@@ -231,8 +231,8 @@ NMSE = []
 PSNR = []
 
 for file in os.listdir(path):
-    x = np.load(path + '/' + file)
-    y_n = operator(x/rescale)
+    x = np.load(path + '/' + file)/rescale
+    y_n = operator(x)
     y_n += np.random.normal(0, 1, y_n.shape)*sigma
     y_n = y_n[None, ..., None]
 
