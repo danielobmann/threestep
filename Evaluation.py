@@ -207,39 +207,41 @@ out_inversion = tf.get_default_graph().get_tensor_by_name("output_inversion:0")
 
 
 # ---------------------------
-# Define generator for data
+# Define metrics for evaluation
+
+def nmse(x_true, x_pred):
+    d = np.mean((x_true - x_pred)**2)
+    n = np.mean(x_true**2)
+    return d/n
 
 
-
-
-def data_generator_inversion(batch_size=32, mode='train', rescale=1000.):
-    p = data_path + mode
-    files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
-    X = [np.load(p + '/' + file) for file in files]
-    x_t = np.stack(X)[..., None]
-
-    # Get low resolution sinograms
-    y_n = [operator(x / rescale) for x in X]
-    y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
-    y_n = np.stack(y_n)[..., None]
-
-    return y_n, x_t
+def psnr(x_true, x_pred):
+    ran = np.amax(x_true) - np.amin(x_true)
+    return 20*np.log(ran/np.mean((x_true - x_pred)**2))
 
 
 # ---------------------------
-# Define generator for data
+# Evaluate on test-data
 path = "../data/mayoclinic/data/full3mm/test"
 sigma = 0.2
 rescale = 1000.
 
+NMSE = []
+PSNR = []
+
 for file in os.listdir(path):
     x = np.load(path + '/' + file)
     y_n = operator(x/rescale)
+    y_n += np.random.normal(0, 1, y_n.shape)*sigma
     y_n = y_n[None, ..., None]
 
     y_d = sess.run(out_denois, feed_dict={inp_denois: y_n})
     y_u = sess.run(out_up, feed_dict={inp_up: y_d})
     x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_u})
+    x_rec = x_rec[0, ..., 0]
+
+    NMSE.append(nmse(x, x_rec))
+    PSNR.append(psnr(x, x_rec))
 
     plt.subplot(221)
     plt.imshow(x, cmap='bone')
@@ -252,15 +254,18 @@ for file in os.listdir(path):
     plt.title('FBP')
 
     plt.subplot(223)
-    plt.imshow(x_rec[0, ..., 0], cmap='bone')
+    plt.imshow(x_rec, cmap='bone')
     plt.axis('off')
     plt.title('Prediction')
 
     plt.subplot(224)
-    plt.imshow(np.abs(x - x_rec[0, ..., 0]), cmap='bone')
+    plt.imshow(np.abs(x - x_rec), cmap='bone')
     plt.axis('off')
     plt.title('FBP')
 
     plt.savefig("images/test/" + file[-8:] + '.pdf', format='pdf')
     plt.clf()
 
+
+print(NMSE)
+print(PSNR)
