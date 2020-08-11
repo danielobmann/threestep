@@ -10,13 +10,14 @@ import tensorflow as tf
 import odl
 import odl.contrib.tensorflow
 import matplotlib.pyplot as plt
+from datanetwork import *
 
 sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
 epochs = 51
-batch_size = 4
+batch_size = 2
 n_training_samples = 1709
 n_validation_samples = 458
 n_batches = n_training_samples//batch_size
@@ -93,36 +94,9 @@ out = tf.identity(out, name='output_denoising')
 
 # ---------------------------
 # Define upsampling network
-inp = tf.placeholder(tf.float32, shape=(None, ) + inp_shape, name='input_upsample')
-out = UpSampling2D(size=(upsampling_factor, 1), interpolation='bilinear')(inp)
 
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(1, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
-# Make output operator consistent
-out = fbp_layer(out)
-out = Conv2D(64, (10, 10), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-out = Conv2D(1, (1, 1), padding='same')(out)
-out = radon_layer(out)
-out = tf.identity(out, name='output_upsample')
+DCS = DataConsistentNetwork(Radon, FBP)
+inp, out = DCS.network(inp_shape)
 
 y_true = tf.placeholder(shape=(None,) + (n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 
@@ -144,7 +118,7 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-0.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-50.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()

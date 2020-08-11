@@ -10,6 +10,7 @@ import tensorflow as tf
 import odl
 import odl.contrib.tensorflow
 import matplotlib.pyplot as plt
+from datanetwork import *
 
 sess = tf.Session()
 
@@ -94,36 +95,10 @@ out = tf.identity(out, name='output_denoising')
 
 # ---------------------------
 # Define upsampling network
-inp = tf.placeholder(tf.float32, shape=(None, ) + inp_shape, name='input_upsample')
-out = UpSampling2D(size=(upsampling_factor, 1), interpolation='bilinear')(inp)
+DCS = DataConsistentNetwork(Radon, FBP)
+inp, out = DCS.network(inp_shape)
 
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(32, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(1, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
-# Make output operator consistent
-out = fbp_layer(out)
-out = Conv2D(64, (10, 10), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-out = Conv2D(1, (1, 1), padding='same')(out)
-out = radon_layer(out)
-out = tf.identity(out, name='output_upsample')
+y_true = tf.placeholder(shape=(None,) + (n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 
 # ---------------------------
 # Define inversion network
