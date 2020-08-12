@@ -16,15 +16,6 @@ sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
-epochs = 51
-batch_size = 4
-n_training_samples = 1709
-n_validation_samples = 458
-n_batches = n_training_samples//batch_size
-n_batches_val = n_validation_samples//batch_size
-
-initial_lr = 1e-3
-
 size = 512
 n_theta = 32
 upsampling_factor = 23
@@ -98,8 +89,6 @@ out = tf.identity(out, name='output_denoising')
 DCS = DataConsistentNetwork(Radon, FBP)
 inp, out = DCS.network(inp_shape)
 
-y_true = tf.placeholder(shape=(None,) + (n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
-
 # ---------------------------
 # Define inversion network
 
@@ -148,22 +137,13 @@ with tf.name_scope('tomography'):
 
 output = tf.identity(x_result, name='output_inversion')
 x_true = tf.placeholder(shape=(None, size, size, 1), dtype=tf.float32)
-# ---------------------------
-# Set up loss function for training
-loss = tf.reduce_sum(tf.squared_difference(output, x_true))
-
-learning_rate = tf.placeholder(dtype=tf.float32)
-opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
-
-train_op = opt.minimize(loss)
-
 
 sess.run(tf.global_variables_initializer())
 
 # Restore graph from trained model
 restore_path = "models/inversion/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'inversion_network-0.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + 'inversion_network-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()

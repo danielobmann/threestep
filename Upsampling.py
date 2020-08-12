@@ -16,7 +16,7 @@ sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
-epochs = 51
+epochs = 21
 batch_size = 2
 n_training_samples = 1709
 n_validation_samples = 458
@@ -228,7 +228,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
+        # print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='train')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 

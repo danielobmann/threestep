@@ -16,7 +16,7 @@ sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
-epochs = 51
+epochs = 21
 batch_size = 1
 n_training_samples = 1709
 n_validation_samples = 458
@@ -162,7 +162,7 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/upsampling/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'upsampling_network-0.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + 'upsampling_network-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()
@@ -245,7 +245,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
+        # print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
         y_in, x_out = data_generator_inversion(batch_size=batch_size, mode='train')
 
         fd = {input_y: y_in,
