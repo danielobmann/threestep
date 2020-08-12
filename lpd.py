@@ -141,10 +141,10 @@ def data_generator_inversion(batch_size=32, mode='train', rescale=1000.):
     p = data_path + mode
     files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
     X = [np.load(p + '/' + file) for file in files]
-    x_t = np.stack(X)[..., None]
+    x_t = np.stack(X)[..., None]/rescale
 
     # Get low resolution sinograms
-    y_n = [operator(x / rescale) for x in X]
+    y_n = [operator(x) for x in X]
     y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
     y_n = np.stack(y_n)[..., None]
 
