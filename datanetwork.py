@@ -73,7 +73,7 @@ class DataConsistentNetwork:
     def network(self, inp_shape, steps=3, filters=32, kernel_size=(3, 3)):
         inp, out, y0 = self.input_layer(inp_shape)
         # Go in steps of 2 to have a unique global step
-        for i in range(0, steps, 2):
+        for i in range(0, 2*steps, 2):
             out = self._data_consistency_block(out, y0, global_step=i, filters=filters, kernel_size=kernel_size)
             out = self._operator_consistency_block(out, global_step=i+1, filters=filters, kernel_size=kernel_size)
         out = tf.identity(out, name='output_upsample')
