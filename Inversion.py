@@ -161,7 +161,7 @@ train_op = opt.minimize(loss)
 sess.run(tf.global_variables_initializer())
 
 # Restore graph from trained model
-restore_path = "models/"
+restore_path = "models/upsampling/"
 if 1:
     new_saver = tf.train.import_meta_graph(restore_path + 'upsampling_network-0.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
