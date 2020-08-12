@@ -229,6 +229,6 @@ for i in range(epochs):
 
 plt.semilogy(hist['loss'])
 plt.semilogy(hist['loss_val'])
-plt.savefig('images/inversion_loss.pdf', format='pdf')
+plt.savefig('images/lpd_loss.pdf', format='pdf')
 
 

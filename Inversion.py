@@ -231,7 +231,7 @@ def cosine_decay(epoch, total, initial=1e-3):
 nmse = tf.reduce_mean(tf.reduce_sum(tf.square(x_true - output), axis=[1, 2, 3])/tf.reduce_sum(x_true**2, axis=[1, 2, 3]))
 
 # ---------------------------
-save_path = "models/inversion_network"
+save_path = "models/inversion/"
 n_save = 10
 n_val = 1
 

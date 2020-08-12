@@ -155,7 +155,7 @@ def data_generator(batch_size=32, mode='train', rescale=1000.):
 
 
 # ---------------------------
-save_path = "models/denoising_network"
+save_path = "models/denoising_network/"
 n_save = 10
 n_val = 1
 

@@ -16,15 +16,6 @@ sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
-epochs = 21
-batch_size = 1
-n_training_samples = 1709
-n_validation_samples = 458
-n_batches = n_training_samples//batch_size
-n_batches_val = n_validation_samples//batch_size
-
-initial_lr = 1e-3
-
 size = 512
 n_theta = 32
 n_s = 768
@@ -99,10 +90,14 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'lpd_network-0.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + 'lpd_network-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()
+
+inp_inversion = tf.get_default_graph().get_tensor_by_name("input_y:0")
+inp_x = tf.get_default_graph().get_tensor_by_name("input_x:0")
+out_inversion = tf.get_default_graph().get_tensor_by_name("output_inversion:0")
 
 # ---------------------------
 # Define metrics for evaluation
@@ -134,7 +129,7 @@ for file in os.listdir(path):
     y_n += np.random.normal(0, 1, y_n.shape)*sigma
     y_n = y_n[None, ..., None]
 
-    x_rec = sess.run(output, feed_dict={input_y: y_n, input_x: np.zeros((1, size, size, 1))})
+    x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_n, inp_x: np.zeros((1, size, size, 1))})
     x_rec = x_rec[0, ..., 0]
 
     NMSE.append(nmse(x, x_rec))
