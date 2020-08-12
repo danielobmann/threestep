@@ -96,14 +96,14 @@ out = tf.identity(out, name='output_denoising')
 # Define upsampling network
 
 DCS = DataConsistentNetwork(Radon, FBP)
-inp, out = DCS.network(inp_shape)
+inp_up, out_up = DCS.network(inp_shape)
 
-y_true = tf.placeholder(shape=(None,) + (n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
+y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 
 
 # ---------------------------
 # Set up loss function for training
-loss = tf.reduce_sum(tf.squared_difference(out, y_true))
+loss = tf.reduce_sum(tf.squared_difference(out_up, y_true))
 
 learning_rate = tf.placeholder(dtype=tf.float32)
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_upsample')
@@ -123,8 +123,8 @@ if 1:
 
 graph = tf.get_default_graph()
 
-inp_denois = tf.get_default_graph().get_tensor_by_name("input_denoising:0")
-out_denois = tf.get_default_graph().get_tensor_by_name("output_denoising:0")
+inp_denois = graph.get_tensor_by_name("input_denoising:0")
+out_denois = graph.get_tensor_by_name("output_denoising:0")
 
 # ---------------------------
 # Set up various functions
@@ -188,7 +188,7 @@ def cosine_decay(epoch, total, initial=1e-3):
     return initial/2.*(1 + np.cos(np.pi*epoch/total))
 
 
-nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
+nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out_up), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
 
 
 # ---------------------------
@@ -210,8 +210,47 @@ def data_generator_upsample(batch_size=32, mode='train', rescale=1000.):
     y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
     y_n = np.stack(y_n)[..., None]
 
-    return y_n, y_t
+    y_d = [operator(x / rescale) for x in X]
+    y_d = np.stack(y_d)[..., None]
 
+    return y_n, y_t, y_d
+
+
+# ---------------------------
+# Test input preprocessing
+
+y_n, y_t, y_d = data_generator_upsample(1)
+y_denois = sess.run(out_denois, feed_dict={inp_denois: y_n})
+y_denois1 = sess.run(out, feed_dict={inp: y_n})
+
+print(np.mean(y_denois==y_denois1), flush=True)
+
+fig, axs = plt.subplots(nrows=2, ncols=2)
+im = axs[0, 0].imshow(y_t[0, ..., 0], cmap='bone')
+axs[0, 0].axis('off')
+axs[0, 0].set_title('True')
+fig.colorbar(im, ax=axs[0, 0])
+
+im = axs[0, 1].imshow(y_n[0, ..., 0], cmap='bone')
+axs[0, 1].set_aspect(n_s/n_theta)
+axs[0, 1].axis('off')
+axs[0, 1].set_title('Noisy')
+fig.colorbar(im, ax=axs[0, 1])
+
+im = axs[1, 1].imshow(y_denois[0, ..., 0], cmap='bone')
+axs[1, 1].set_aspect(n_s/n_theta)
+axs[1, 1].axis('off')
+axs[1, 1].set_title('Denoised')
+fig.colorbar(im, ax=axs[1, 1])
+
+im = axs[1, 0].imshow(y_d[0, ..., 0], cmap='bone')
+axs[1, 0].set_aspect(n_s/n_theta)
+axs[1, 0].axis('off')
+axs[1, 0].set_title('True')
+fig.colorbar(im, ax=axs[1, 0])
+
+plt.savefig("images/UpsamplingInputTest.pdf", format='pdf')
+plt.clf()
 
 # ---------------------------
 save_path = "models/upsampling/"
@@ -232,7 +271,7 @@ for i in range(epochs):
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='train')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 
-        fd = {inp: y_denois,
+        fd = {inp_up: y_denois,
               y_true: y_output,
               learning_rate: cosine_decay(i, epochs)}
 
@@ -253,7 +292,7 @@ for i in range(epochs):
             y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='val')
             y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 
-            fd = {inp: y_denois,
+            fd = {inp_up: y_denois,
                   y_true: y_output}
 
             c, nm = sess.run([loss, nmse], feed_dict=fd)
@@ -269,10 +308,10 @@ for i in range(epochs):
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='val')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 
-        fd = {inp: y_denois,
+        fd = {inp_up: y_denois,
               y_true: y_output}
 
-        y_pred = sess.run(out, feed_dict=fd)
+        y_pred = sess.run(out_up, feed_dict=fd)
         plot_validation(y_input, y_pred, y_output, epoch=i)
 
     # Save model every

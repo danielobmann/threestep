@@ -155,7 +155,7 @@ def data_generator(batch_size=32, mode='train', rescale=1000.):
 
 
 # ---------------------------
-save_path = "models/denoising_network/"
+save_path = "models/denoising/"
 n_save = 10
 n_val = 1
 
@@ -173,7 +173,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f" % ((j+1)/n_batches), end='\r', flush=True)
+        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
         y_input, y_output = data_generator(batch_size=batch_size, mode='train')
 
         fd = {inp: y_input,

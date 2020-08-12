@@ -115,16 +115,19 @@ def plot_validation(x_pred, x_true, epoch=10):
         plt.imshow(x_true[i, ..., 0], cmap='bone')
         plt.axis('off')
         plt.title('True')
+        plt.colorbar()
 
         plt.subplot(132)
         plt.imshow(x_pred[i, ..., 0], cmap='bone')
         plt.axis('off')
         plt.title('Output')
+        plt.colorbar()
 
         plt.subplot(133)
         plt.imshow(np.abs(x_pred[i, ..., 0] - x_true[i, ..., 0]), cmap='bone')
         plt.axis('off')
         plt.title('Difference')
+        plt.colorbar()
 
         plt.savefig('images/LPDValidationImage_Epoch' + str(epoch) + '_' + str(i) + '.pdf', format='pdf')
         plt.clf()

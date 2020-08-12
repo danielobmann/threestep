@@ -43,6 +43,8 @@ class DataConsistentNetwork:
 
         out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size)
         out = Conv2D(1, (1, 1), padding='same')(out)
+        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x')(out)
+        out = PReLU(shared_axes=[1, 2])(out)
 
         # Enforce consistency with data
         out = out*(1-self._mask) + y0
@@ -53,13 +55,17 @@ class DataConsistentNetwork:
 
         out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size)
         out = Conv2D(1, (1, 1), padding='same')(out)
+        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_y1')(out)
+        out = PReLU(shared_axes=[1, 2])(out)
 
         # Enforce operator consistency
         out = self._pseudoinverse_tensorflow(out)
         out = Conv2D(filters, (10, 10), padding='same')(out)
-        out = BatchNormalization()(out)
+        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x1')(out)
         out = PReLU(shared_axes=[1, 2])(out)
         out = Conv2D(1, (1, 1))(out)
+        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x2')(out)
+        out = PReLU(shared_axes=[1, 2])(out)
         out = self._operator_tensorflow(out)
 
         return out
