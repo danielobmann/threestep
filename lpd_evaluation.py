@@ -162,3 +162,20 @@ for file in os.listdir(path):
 
 print(NMSE)
 print(PSNR)
+
+
+# ------------------------
+# Plot one specific example for paper
+np.random.seed(1)
+file = np.random.choice(os.listdir(path))[0]
+x = np.load(path + '/' + file)/rescale
+y_n = operator(x)
+y_n += np.random.normal(0, 1, y_n.shape)*sigma
+y_n = y_n[None, ..., None]
+
+x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_n, inp_x: np.zeros((1, size, size, 1))})
+x_rec = x_rec[0, ..., 0]
+
+plt.imshow(x_rec, cmap='bone')
+plt.axis('off')
+plt.savefig('images/reconstruction_lpd.pdf', format='pdf')
