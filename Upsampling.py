@@ -96,7 +96,7 @@ out = tf.identity(out, name='output_denoising')
 # Define upsampling network
 
 DCS = DataConsistentNetwork(Radon, FBP)
-inp_up, out_up = DCS.network(inp_shape)
+inp_up, out_up = DCS.network(inp_shape, steps=2)
 
 y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 
@@ -118,7 +118,7 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/denoising/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-20.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + '-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()
@@ -210,20 +210,14 @@ def data_generator_upsample(batch_size=32, mode='train', rescale=1000.):
     y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
     y_n = np.stack(y_n)[..., None]
 
-    y_d = [operator(x / rescale) for x in X]
-    y_d = np.stack(y_d)[..., None]
-
-    return y_n, y_t, y_d
+    return y_n, y_t
 
 
 # ---------------------------
 # Test input preprocessing
 
-y_n, y_t, y_d = data_generator_upsample(1)
+y_n, y_t = data_generator_upsample(1)
 y_denois = sess.run(out_denois, feed_dict={inp_denois: y_n})
-y_denois1 = sess.run(out, feed_dict={inp: y_n})
-
-print(np.mean(y_denois==y_denois1), flush=True)
 
 fig, axs = plt.subplots(nrows=2, ncols=2)
 im = axs[0, 0].imshow(y_t[0, ..., 0], cmap='bone')
@@ -243,7 +237,7 @@ axs[1, 1].axis('off')
 axs[1, 1].set_title('Denoised')
 fig.colorbar(im, ax=axs[1, 1])
 
-im = axs[1, 0].imshow(y_d[0, ..., 0], cmap='bone')
+im = axs[1, 0].imshow(y_denois[0, ..., 0], cmap='bone')
 axs[1, 0].set_aspect(n_s/n_theta)
 axs[1, 0].axis('off')
 axs[1, 0].set_title('True')
@@ -267,7 +261,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        # print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
+        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='train')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 

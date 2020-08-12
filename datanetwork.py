@@ -29,52 +29,51 @@ class DataConsistentNetwork:
         return inp, out, y0
 
     @staticmethod
-    def _convolution_block(out, global_step, steps=3, filters=32, kernel_size=(3, 3)):
+    def _convolution_block(out, global_step, steps=2, filters=32, kernel_size=(3, 3), batch=False):
         out = Conv2D(1, (1, 1), padding='same')(out)
 
         for step in range(steps):
             out = Conv2D(filters, kernel_size, padding='same')(out)
-            out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_' + str(step))(out)
-            out = PReLU(shared_axes=[1, 2])(out)
+            if batch:
+                out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_' + str(step))(out)
+            out = PReLU()(out)
 
         return out
 
-    def _data_consistency_block(self, inp, y0, global_step, filters=32, kernel_size=(3, 3)):
+    def _data_consistency_block(self, inp, y0, global_step, filters=32, kernel_size=(3, 3), batch=False):
 
-        out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size)
+        out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size, batch=batch)
+
         out = Conv2D(1, (1, 1), padding='same')(out)
-        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x')(out)
-        out = PReLU(shared_axes=[1, 2])(out)
+        out = PReLU()(out)
 
         # Enforce consistency with data
         out = out*(1-self._mask) + y0
 
         return out
 
-    def _operator_consistency_block(self, inp, global_step, filters=32, kernel_size=(3, 3)):
+    def _operator_consistency_block(self, inp, global_step, filters=32, kernel_size=(3, 3), batch=False):
 
-        out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size)
+        out = self._convolution_block(inp, global_step=global_step, filters=filters, kernel_size=kernel_size, batch=batch)
         out = Conv2D(1, (1, 1), padding='same')(out)
-        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_y1')(out)
-        out = PReLU(shared_axes=[1, 2])(out)
+        out = PReLU()(out)
 
         # Enforce operator consistency
         out = self._pseudoinverse_tensorflow(out)
-        out = Conv2D(filters, (10, 10), padding='same')(out)
-        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x1')(out)
-        out = PReLU(shared_axes=[1, 2])(out)
+
+        out = self._convolution_block(out, global_step=global_step+100, filters=filters, kernel_size=kernel_size, batch=batch)
         out = Conv2D(1, (1, 1))(out)
-        out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_x2')(out)
-        out = PReLU(shared_axes=[1, 2])(out)
+        out = PReLU()(out)
+
         out = self._operator_tensorflow(out)
 
         return out
 
-    def network(self, inp_shape, steps=3, filters=32, kernel_size=(3, 3)):
+    def network(self, inp_shape, steps=5, filters=32, kernel_size=(3, 3), batch=False):
         inp, out, y0 = self.input_layer(inp_shape)
         # Go in steps of 2 to have a unique global step
         for i in range(0, 2*steps, 2):
-            out = self._data_consistency_block(out, y0, global_step=i, filters=filters, kernel_size=kernel_size)
-            out = self._operator_consistency_block(out, global_step=i+1, filters=filters, kernel_size=kernel_size)
+            out = self._data_consistency_block(out, y0, global_step=i, filters=filters, kernel_size=kernel_size, batch=batch)
+            out = self._operator_consistency_block(out, global_step=i+1, filters=filters, kernel_size=kernel_size, batch=batch)
         out = tf.identity(out, name='output_upsample')
         return inp, out
