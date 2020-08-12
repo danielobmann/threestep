@@ -4,13 +4,13 @@ sys.path.append('..')
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from tensorflow.keras.layers import Conv2D, BatchNormalization, PReLU, UpSampling2D, Add
+from tensorflow.keras.layers import Conv2D, PReLU
 import numpy as np
 import tensorflow as tf
 import odl
 import odl.contrib.tensorflow
 import matplotlib.pyplot as plt
-from datanetwork import *
+
 
 sess = tf.Session()
 
@@ -95,9 +95,9 @@ if 1:
 
 graph = tf.get_default_graph()
 
-inp_inversion = tf.get_default_graph().get_tensor_by_name("input_y:0")
-inp_x = tf.get_default_graph().get_tensor_by_name("input_x:0")
-out_inversion = tf.get_default_graph().get_tensor_by_name("output_inversion:0")
+inp_inversion = graph.get_tensor_by_name("input_y_1:0")
+inp_x = graph.get_tensor_by_name("input_x_1:0")
+out_inversion = graph.get_tensor_by_name("output_inversion_1:0")
 
 # ---------------------------
 # Define metrics for evaluation
