@@ -55,9 +55,10 @@ input_y = tf.placeholder(tf.float32, shape=(None, n_theta, n_s, 1), name='input_
 input_x = tf.placeholder(tf.float32, shape=(None, size, size, 1), name='input_x')
 
 
-def apply_conv(inputs, filters=32):
+def apply_conv(inputs, filters=32, act=True):
     outputs = Conv2D(filters, kernel_size=(3, 3), padding='same')(inputs)
-    outputs = PReLU()(outputs)
+    if act:
+        outputs = PReLU()(outputs)
     return outputs
 
 
@@ -74,7 +75,7 @@ with tf.name_scope('tomography'):
 
             update = apply_conv(update)
             update = apply_conv(update)
-            update = apply_conv(update, filters=n_dual)
+            update = apply_conv(update, filters=n_dual, act=False)
             dual = dual + update
 
         with tf.variable_scope('primal_iterate_{}'.format(i)):
@@ -87,7 +88,7 @@ with tf.name_scope('tomography'):
 
             update = apply_conv(update)
             update = apply_conv(update)
-            update = apply_conv(update, filters=n_primal)
+            update = apply_conv(update, filters=n_primal, act=False)
             primal = primal + update
 
     x_result = primal[..., 0:1]
@@ -172,7 +173,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f" % ((j+1)/n_batches), end='\r', flush=True)
+        # print("Progress %f" % ((j+1)/n_batches), end='\r', flush=True)
         y_in, x_out = data_generator_inversion(batch_size=batch_size, mode='train')
 
         fd = {input_y: y_in,

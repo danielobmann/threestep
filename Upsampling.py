@@ -118,7 +118,7 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/denoising/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-50.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()
@@ -228,7 +228,7 @@ for i in range(epochs):
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f" % ((j+1)/n_batches), end='\r', flush=True)
+        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='train')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 

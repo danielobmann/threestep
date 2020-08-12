@@ -116,7 +116,7 @@ def nmse(x_true, x_pred):
 
 def psnr(x_true, x_pred):
     ran = np.amax(x_true) - np.amin(x_true)
-    return 20*np.log(ran/np.mean((x_true - x_pred)**2))
+    return 20*np.log(ran) - 10*np.log(np.mean((x_true - x_pred)**2))
 
 
 # ---------------------------
