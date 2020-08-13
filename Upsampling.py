@@ -63,32 +63,23 @@ inp_shape = operator.range.shape + (1, )
 inp = tf.placeholder(tf.float32, shape=(None,) + inp_shape, name='input_denoising')
 
 out = Conv2D(64, (3, 3), padding='same')(inp)
-out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
 out = PReLU()(out)
 
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(1, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
+out = Conv2D(1, (1, 1), padding='same')(out)
 out = Add()([out, inp])
 
 # Make output operator consistent
 out = odl_op_layer_pseudo(out)
+
 out = Conv2D(64, (10, 10), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
 out = Conv2D(1, (1, 1), padding='same')(out)
+
 out = odl_op_layer(out)
 out = tf.identity(out, name='output_denoising')
 
@@ -114,7 +105,7 @@ train_op = opt.minimize(loss)
 sess.run(tf.global_variables_initializer())
 
 # Restore graph from trained model
-restore_path = "models/denoising/"
+restore_path = "models/denoising/denoising_network"
 if 1:
     new_saver = tf.train.import_meta_graph(restore_path + '-20.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
