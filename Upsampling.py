@@ -86,8 +86,8 @@ out = tf.identity(out, name='output_denoising')
 # ---------------------------
 # Define upsampling network
 
-DCS = DataConsistentNetwork(Radon, FBP)
-inp_up, out_up = DCS.network(inp_shape)
+DCS = DataConsistentNetwork(Radon, Radon.adjoint)
+inp_up, out_up = DCS.network(inp_shape, steps=5, filters=16)
 
 # ---------------------------
 # Set up loss function for training
