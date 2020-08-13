@@ -87,7 +87,7 @@ y_true = tf.placeholder(shape=(None,) + inp_shape, dtype=tf.float32)
 
 # ---------------------------
 # Set up loss function for training
-loss = tf.reduce_sum(tf.squared_difference(out, y_true))
+loss = tf.reduce_mean(tf.squared_difference(out, y_true))
 
 learning_rate = tf.placeholder(dtype=tf.float32)
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate)

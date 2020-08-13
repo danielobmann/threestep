@@ -103,7 +103,7 @@ y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=t
 
 # ---------------------------
 # Set up loss function for training
-loss = tf.reduce_sum(tf.squared_difference(out_up, y_true))
+loss = tf.reduce_mean(tf.squared_difference(out_up, y_true))
 
 learning_rate = tf.placeholder(dtype=tf.float32)
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_upsample')

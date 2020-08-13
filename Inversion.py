@@ -96,7 +96,7 @@ out = tf.identity(out, name='output_denoising')
 # ---------------------------
 # Define upsampling network
 DCS = DataConsistentNetwork(Radon, FBP)
-inp, out = DCS.network(inp_shape)
+inp_up, out_up = DCS.network(inp_shape, steps=5, filters=16)
 
 # ---------------------------
 # Define inversion network
@@ -149,7 +149,7 @@ output = tf.identity(x_result, name='output_inversion')
 x_true = tf.placeholder(shape=(None, size, size, 1), dtype=tf.float32)
 # ---------------------------
 # Set up loss function for training
-loss = tf.reduce_sum(tf.squared_difference(output, x_true))
+loss = tf.reduce_mean(tf.squared_difference(output, x_true))
 
 learning_rate = tf.placeholder(dtype=tf.float32)
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
