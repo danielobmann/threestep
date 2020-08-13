@@ -45,48 +45,46 @@ operator /= odl.operator.power_method_opnorm(operator)
 odl_op_layer = odl.contrib.tensorflow.as_tensorflow_layer(operator, 'RayTransform')
 odl_op_layer_pseudo = odl.contrib.tensorflow.as_tensorflow_layer(pseudoinverse, 'RayTransformPseudo')
 
-
 # ---------------------------
-# Define network architecture
+# Define denoising architecture
 inp_shape = operator.range.shape + (1, )
 
 inp = tf.placeholder(tf.float32, shape=(None,) + inp_shape, name='input_denoising')
 
-out = Conv2D(64, (3, 3), padding='same')(inp)
-out = BatchNormalization()(out)
+out = Conv2D(32, (3, 3), padding='same')(inp)
+# out = BatchNormalization()(out)
 out = PReLU()(out)
 
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
+out = Conv2D(32, (3, 3), padding='same')(out)
+# out = BatchNormalization()(out)
 out = PReLU()(out)
 
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
+out = Conv2D(32, (3, 3), padding='same')(out)
+# out = BatchNormalization()(out)
 out = PReLU()(out)
 
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = BatchNormalization()(out)
-out = PReLU()(out)
-
-out = Conv2D(1, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
+out = Conv2D(1, (1, 1), padding='same')(out)
 out = Add()([out, inp])
 
 # Make output operator consistent
 out = odl_op_layer_pseudo(out)
-out = Conv2D(64, (10, 10), padding='same')(out)
-out = BatchNormalization()(out)
+
+out = Conv2D(32, (3, 3), padding='same')(out)
+# out = BatchNormalization()(out)
 out = PReLU()(out)
+
+out = Conv2D(32, (3, 3), padding='same')(out)
+# out = BatchNormalization()(out)
+out = PReLU()(out)
+
 out = Conv2D(1, (1, 1), padding='same')(out)
+
 out = odl_op_layer(out)
 out = tf.identity(out, name='output_denoising')
 
-y_true = tf.placeholder(shape=(None,) + inp_shape, dtype=tf.float32)
-
-
 # ---------------------------
 # Set up loss function for training
+y_true = tf.placeholder(shape=(None,) + inp_shape, dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out, y_true))
 
 learning_rate = tf.placeholder(dtype=tf.float32)
@@ -135,8 +133,22 @@ def cosine_decay(epoch, total, initial=1e-3):
     return initial/2.*(1 + np.cos(np.pi*epoch/total))
 
 
-nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
+def log10(x):
+    numerator = tf.log(x)
+    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
+    return numerator / denominator
 
+
+def PSNR(x_result, x_true, name='psnr'):
+    with tf.name_scope(name):
+        maxval = tf.reduce_max(x_true) - tf.reduce_min(x_true)
+        mse = tf.reduce_mean((x_result - x_true) ** 2)
+
+        return 20 * log10(maxval) - 10 * log10(mse)
+
+
+nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
+psnr = PSNR(y_true, out)
 
 # ---------------------------
 data_path = "../data/mayoclinic/data/full3mm/"
@@ -155,9 +167,10 @@ def data_generator(batch_size=32, mode='train', rescale=1000.):
 
 
 # ---------------------------
-save_path = "models/denoising/"
+save_path = "models/denoising/denoising_network"
 n_save = 10
 n_val = 1
+n_plot = 5
 
 print("Initialization successful. Starting training...", flush=True)
 
@@ -170,6 +183,7 @@ saver = tf.train.Saver()
 for i in range(epochs):
     ERR = []
     NMSE = []
+    PSN = []
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
@@ -180,11 +194,12 @@ for i in range(epochs):
               y_true: y_output,
               learning_rate: cosine_decay(i, epochs)}
 
-        c, nm, _ = sess.run([loss, nmse, train_op], feed_dict=fd)
+        c, nm, ps, _ = sess.run([loss, nmse, psnr, train_op], feed_dict=fd)
         NMSE.append(nm)
+        PSN.append(ps)
         ERR.append(c)
 
-    print("   Training: Loss %f NMSE %f" % (np.mean(ERR), np.mean(NMSE)), end='\r', flush=True)
+    print("   Training: Loss %f NMSE %f PSNR %f" % (np.mean(ERR), np.mean(NMSE), np.mean(PSN)), end='\r', flush=True)
     hist['loss'].append(np.mean(ERR))
     hist['nmse'].append(np.mean(NMSE))
 
@@ -193,22 +208,24 @@ for i in range(epochs):
     if i % n_val == 0:
         ERR_VAL = []
         NMSE_VAL = []
+        PSN_VAL = []
         for j in range(n_batches_val):
             y_input, y_output = data_generator(batch_size=batch_size, mode='val')
 
             fd = {inp: y_input,
                   y_true: y_output}
 
-            c, nm = sess.run([loss, nmse], feed_dict=fd)
+            c, nm, ps = sess.run([loss, nmse, psnr], feed_dict=fd)
             ERR_VAL.append(c)
+            PSN_VAL.append(ps)
             NMSE_VAL.append(nm)
         print(" ")
-        print("   Validation: Loss %f Validation NMSE %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL)))
+        print("   Validation: Loss %f Validation NMSE %f PSNR %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL), np.mean(PSN_VAL)))
         print(" ", flush=True)
         hist['loss_val'].append(np.mean(ERR_VAL))
         hist['nmse_val'].append(np.mean(NMSE_VAL))
 
-    if (i % 10) == 0:
+    if (i % n_plot) == 0:
         y_input, y_output = data_generator(batch_size=batch_size, mode='val')
 
         fd = {inp: y_input,

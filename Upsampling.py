@@ -96,16 +96,14 @@ out = tf.identity(out, name='output_denoising')
 # Define upsampling network
 
 DCS = DataConsistentNetwork(Radon, FBP)
-inp_up, out_up = DCS.network(inp_shape, steps=2)
-
-y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
-
+inp_up, out_up = DCS.network(inp_shape)
 
 # ---------------------------
 # Set up loss function for training
+y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out_up, y_true))
 
-learning_rate = tf.placeholder(dtype=tf.float32)
+learning_rate = tf.placeholder(dtype=tf.float32, name='lr_upsample')
 opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_upsample')
 
 train_op = opt.minimize(loss)
@@ -188,8 +186,22 @@ def cosine_decay(epoch, total, initial=1e-3):
     return initial/2.*(1 + np.cos(np.pi*epoch/total))
 
 
-nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out_up), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
+def log10(x):
+    numerator = tf.log(x)
+    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
+    return numerator / denominator
 
+
+def PSNR(x_result, x_true, name='psnr'):
+    with tf.name_scope(name):
+        maxval = tf.reduce_max(x_true) - tf.reduce_min(x_true)
+        mse = tf.reduce_mean((x_result - x_true) ** 2)
+
+        return 20 * log10(maxval) - 10 * log10(mse)
+
+
+nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out_up), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
+psnr = PSNR(y_true, out_up)
 
 # ---------------------------
 data_path = "../data/mayoclinic/data/full3mm/"
@@ -250,6 +262,7 @@ plt.clf()
 save_path = "models/upsampling/"
 n_save = 10
 n_val = 1
+n_plot = 1
 
 print("Initialization successful. Starting training...", flush=True)
 hist = {'loss': [], 'nmse': [], 'loss_val': [], 'nmse_val': []}
@@ -258,6 +271,7 @@ hist = {'loss': [], 'nmse': [], 'loss_val': [], 'nmse_val': []}
 for i in range(epochs):
     ERR = []
     NMSE = []
+    PSN = []
 
     print("### Epoch %d/%d ###" % (i + 1, epochs))
     for j in range(n_batches):
@@ -269,11 +283,12 @@ for i in range(epochs):
               y_true: y_output,
               learning_rate: cosine_decay(i, epochs)}
 
-        c, nm, _ = sess.run([loss, nmse, train_op], feed_dict=fd)
+        c, nm, ps, _ = sess.run([loss, nmse, psnr, train_op], feed_dict=fd)
         NMSE.append(nm)
+        PSN.append(ps)
         ERR.append(c)
 
-    print("   Training: Loss %f NMSE %f" % (np.mean(ERR), np.mean(NMSE)), end='\r', flush=True)
+    print("   Training: Loss %f NMSE %f PSNR %f" % (np.mean(ERR), np.mean(NMSE), np.mean(PSN)), end='\r', flush=True)
     hist['loss'].append(np.mean(ERR))
     hist['nmse'].append(np.mean(NMSE))
 
@@ -282,6 +297,7 @@ for i in range(epochs):
     if i % n_val == 0:
         ERR_VAL = []
         NMSE_VAL = []
+        PSN_VAL = []
         for j in range(n_batches_val):
             y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='val')
             y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
@@ -289,16 +305,17 @@ for i in range(epochs):
             fd = {inp_up: y_denois,
                   y_true: y_output}
 
-            c, nm = sess.run([loss, nmse], feed_dict=fd)
+            c, nm, ps = sess.run([loss, nmse, psnr], feed_dict=fd)
             ERR_VAL.append(c)
+            PSN_VAL.append(ps)
             NMSE_VAL.append(nm)
         print(" ")
-        print("   Validation: Loss %f Validation NMSE %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL)))
+        print("   Validation: Loss %f Validation NMSE %f PSNR %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL), np.mean(PSN_VAL)))
         print(" ", flush=True)
         hist['loss_val'].append(np.mean(ERR_VAL))
         hist['nmse_val'].append(np.mean(NMSE_VAL))
 
-    if (i % 10) == 0:
+    if (i % n_plot) == 0:
         y_input, y_output = data_generator_upsample(batch_size=batch_size, mode='val')
         y_denois = sess.run(out_denois, feed_dict={inp_denois: y_input})
 

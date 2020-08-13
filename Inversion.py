@@ -162,7 +162,7 @@ sess.run(tf.global_variables_initializer())
 # Restore graph from trained model
 restore_path = "models/upsampling/"
 if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'upsampling_network-20.meta')
+    new_saver = tf.train.import_meta_graph(restore_path + '-0.meta')
     new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 graph = tf.get_default_graph()
@@ -170,11 +170,11 @@ graph = tf.get_default_graph()
 
 # ---------------------------
 # Define inputs and outputs of denoising/upsampling network
-inp_denois = tf.get_default_graph().get_tensor_by_name("input_denoising:0")
-out_denois = tf.get_default_graph().get_tensor_by_name("output_denoising:0")
+inp_denois = graph.get_tensor_by_name("input_denoising:0")
+out_denois = graph.get_tensor_by_name("output_denoising:0")
 
-inp_up = tf.get_default_graph().get_tensor_by_name("input_upsample:0")
-out_up = tf.get_default_graph().get_tensor_by_name("output_upsample:0")
+inp_up_new = graph.get_tensor_by_name("input_upsample:0")
+out_up_new = graph.get_tensor_by_name("output_upsample:0")
 
 
 def plot_validation(x_pred, x_true, epoch=10):
@@ -218,12 +218,13 @@ def data_generator_inversion(batch_size=32, mode='train', rescale=1000.):
 
     y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
     y_n = np.stack(y_n)[..., None]
+    y_t = y_n
 
     # Process images
     y_n = sess.run(out_denois, feed_dict={inp_denois: y_n})
     y_up = sess.run(out_up, feed_dict={inp_up: y_n})
 
-    return y_up, x_t
+    return y_up, x_t, y_n, y_t
 
 
 def cosine_decay(epoch, total, initial=1e-3):
@@ -231,6 +232,44 @@ def cosine_decay(epoch, total, initial=1e-3):
 
 
 nmse = tf.reduce_mean(tf.reduce_sum(tf.square(x_true - output), axis=[1, 2, 3])/tf.reduce_sum(x_true**2, axis=[1, 2, 3]))
+
+# ---------------------------
+# Input example
+
+y_example, x_example, y_noisy, y_t = data_generator_inversion(1)
+
+y_example1 = sess.run(out_up_new, feed_dict={inp_up_new: y_noisy})
+
+print(np.mean(y_example == y_example1))
+
+plt.subplot(221)
+plt.imshow(y_example[0, ..., 0], cmap='bone')
+plt.colorbar()
+
+plt.subplot(222)
+plt.imshow(FBP(y_example[0, ..., 0]), cmap='bone')
+
+plt.subplot(223)
+plt.imshow(Radon(x_example[0, ..., 0]), cmap='bone')
+plt.colorbar()
+
+plt.subplot(224)
+plt.imshow(x_example[0, ..., 0], cmap='bone')
+
+plt.savefig("images/inversion_input_example.pdf", format='pdf')
+plt.clf()
+
+
+plt.subplot(121)
+plt.imshow(y_noisy[0, ..., 0], cmap='bone')
+plt.colorbar()
+
+plt.subplot(122)
+plt.imshow(y_t[0, ..., 0], cmap='bone')
+plt.colorbar()
+
+plt.savefig("images/inversion_denoised_input.pdf", format='pdf')
+
 
 # ---------------------------
 save_path = "models/inversion/"
