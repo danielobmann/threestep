@@ -52,15 +52,15 @@ inp_shape = operator.range.shape + (1, )
 inp = tf.placeholder(tf.float32, shape=(None,) + inp_shape, name='input_denoising')
 
 out = Conv2D(32, (3, 3), padding='same')(inp)
-# out = BatchNormalization()(out)
+out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(32, (3, 3), padding='same')(out)
-# out = BatchNormalization()(out)
+out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(32, (3, 3), padding='same')(out)
-# out = BatchNormalization()(out)
+out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(1, (1, 1), padding='same')(out)
@@ -70,11 +70,11 @@ out = Add()([out, inp])
 out = odl_op_layer_pseudo(out)
 
 out = Conv2D(32, (3, 3), padding='same')(out)
-# out = BatchNormalization()(out)
+out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(32, (3, 3), padding='same')(out)
-# out = BatchNormalization()(out)
+out = BatchNormalization()(out)
 out = PReLU()(out)
 
 out = Conv2D(1, (1, 1), padding='same')(out)
