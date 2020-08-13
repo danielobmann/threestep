@@ -231,7 +231,7 @@ print(PSNR)
 # ------------------------
 # Plot one specific example for paper
 np.random.seed(1)
-file = np.random.choice(os.listdir(path))[0]
+file = np.random.choice(os.listdir(path))
 x = np.load(path + '/' + file)/rescale
 y_n = operator(x)
 y_n += np.random.normal(0, 1, y_n.shape)*sigma
@@ -250,6 +250,6 @@ plt.imshow(x, cmap='bone')
 plt.axis('off')
 plt.savefig('images/reconstruction_gt.pdf', format='pdf')
 
-plt.imshow(FBP(y_n[0, ..., 0]), cmap='bone')
+plt.imshow(pseudoinverse(y_n[0, ..., 0]), cmap='bone')
 plt.axis('off')
 plt.savefig('images/reconstruction_fbp.pdf', format='pdf')
