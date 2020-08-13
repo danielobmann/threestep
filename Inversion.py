@@ -210,10 +210,12 @@ def data_generator_inversion(batch_size=32, mode='train', rescale=1000.):
     p = data_path + mode
     files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
     X = [np.load(p + '/' + file) for file in files]
-    x_t = np.stack(X)[..., None]
+    y_n = [operator(x / rescale) for x in X]
+
+    x_t = np.stack(X)[..., None]/rescale
 
     # Get low resolution sinograms
-    y_n = [operator(x / rescale) for x in X]
+
     y_n = [y + np.random.normal(0, 1, y.shape) * sigma for y in y_n]
     y_n = np.stack(y_n)[..., None]
 
@@ -303,4 +305,30 @@ plt.semilogy(hist['loss'])
 plt.semilogy(hist['loss_val'])
 plt.savefig('images/inversion_loss.pdf', format='pdf')
 
+
+# ------------------------
+# Plot one specific example for paper
+
+path = "../data/mayoclinic/data/full3mm/test"
+sigma = 0.2
+rescale = 1000.
+
+
+np.random.seed(1)
+file = np.random.choice(os.listdir(path))
+x = np.load(path + '/' + file)/rescale
+y_n = operator(x)
+y_n += np.random.normal(0, 1, y_n.shape)*sigma
+y_n = y_n[None, ..., None]
+
+y_n = sess.run(out_denois, feed_dict={inp_denois: y_n})
+y_up = sess.run(out_up, feed_dict={inp_up: y_n})
+
+x_rec = sess.run(output, feed_dict={input_y: y_up, input_x: np.zeros((1, size, size, 1))})
+x_rec = x_rec[0, ..., 0]
+
+
+plt.imshow(x_rec, cmap='bone')
+plt.axis('off')
+plt.savefig('images/reconstruction_racoon.pdf', format='pdf')
 
