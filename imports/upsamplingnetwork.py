@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Conv2D, PReLU, BatchNormalization, UpSampling2D, Concatenate
+from tensorflow.keras.layers import Conv2D, PReLU, BatchNormalization, UpSampling2D
 import tensorflow as tf
 import odl.contrib.tensorflow
 import numpy as np
@@ -9,8 +9,8 @@ class DataConsistentNetwork:
     def __init__(self, operator, pseudoinverse):
         self._operator = operator
         self._psuedoinverse = pseudoinverse
-        self._operator_tensorflow = odl.contrib.tensorflow.as_tensorflow_layer(operator, 'Operator')
-        self._pseudoinverse_tensorflow = odl.contrib.tensorflow.as_tensorflow_layer(pseudoinverse, 'Pseudo')
+        self._operator_tensorflow = odl.contrib.tensorflow.as_tensorflow_layer(operator, 'OperatorUpsampling')
+        self._pseudoinverse_tensorflow = odl.contrib.tensorflow.as_tensorflow_layer(pseudoinverse, 'PseudoUpsampling')
         self._out_shape = operator.range.shape
         self._mask = np.zeros(self._out_shape)
 
