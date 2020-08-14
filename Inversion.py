@@ -15,11 +15,10 @@ sess = tf.Session()
 # Specify parameters
 epochs = 21
 batch_size = 1
-batch_size_val = 16
-n_training_samples = 5#1709
-n_validation_samples = 32#458
+n_training_samples = 1709
+n_validation_samples = 458
 n_batches = n_training_samples//batch_size
-n_batches_val = n_validation_samples//batch_size_val
+n_batches_val = n_validation_samples//batch_size
 
 initial_lr = 1e-3
 
@@ -121,7 +120,7 @@ plt.savefig("images/inversion_denoised_input.pdf", format='pdf')
 
 # ---------------------------
 save_path = "models/inversion/inversion_network"
-n_save = 10
+n_save = 5
 n_val = 1
 n_plot = 1
 
@@ -157,7 +156,7 @@ for epoch in range(epochs):
         NMSE_VAL = []
         PSNR_VAL = []
         for j in range(n_batches_val):
-            y_noisy, _, x_t = DG.get_batch(batch_size=batch_size_val, mode='val')
+            y_noisy, _, x_t = DG.get_batch(batch_size=batch_size, mode='val')
             y_denoised = sess.run(out_denoising, feed_dict={inp_denoising: y_noisy})
             y_upsample = sess.run(out_up, feed_dict={inp_up: y_denoised})
 
@@ -187,7 +186,7 @@ for epoch in range(epochs):
 
     # Save model every
     if (epoch % n_save) == 0:
-        saver.save(sess, save_path, global_step=i)
+        saver.save(sess, save_path, global_step=epoch)
 
 
 # ------------------------
