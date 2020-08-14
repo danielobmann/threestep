@@ -21,6 +21,8 @@ n_batches_val = n_validation_samples//batch_size
 
 initial_lr = 1e-3
 
+restore_path = "models/denoising/"
+
 # ---------------------------
 # Set up denoising network
 inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network()
@@ -42,16 +44,8 @@ train_op = opt.minimize(loss)
 # Restore denoising model
 sess.run(tf.global_variables_initializer())
 
-# Restore graph from trained model
-restore_path = "models/denoising/"
-if 1:
-    new_saver = tf.train.import_meta_graph(restore_path + 'denoising_network-20.meta')
-    new_saver.restore(sess, tf.train.latest_checkpoint(restore_path))
-
-graph = tf.get_default_graph()
-
-# inp_denois = graph.get_tensor_by_name("input_denoising:0")
-# out_denois = graph.get_tensor_by_name("output_denoising:0")
+saver = tf.train.import_meta_graph(restore_path + 'denoising_network-20.meta')
+saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 # ---------------------------
 # Set up various functions
@@ -213,5 +207,5 @@ for epoch in range(epochs):
 
     # Save model every
     if (epoch % n_save) == 0:
-        new_saver.save(sess, save_path, global_step=epoch)
+        saver.save(sess, save_path, global_step=epoch)
 
