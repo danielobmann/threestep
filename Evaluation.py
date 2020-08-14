@@ -22,7 +22,7 @@ n_batches_val = n_validation_samples//batch_size
 
 initial_lr = 1e-3
 
-restore_path = "models/upsampling/"
+restore_path = "models/inversion/"
 
 # ---------------------------
 # Set up networks
@@ -37,20 +37,6 @@ saver = tf.train.import_meta_graph(restore_path + 'inversion_network-20.meta')
 saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 # ---------------------------
-# Define metrics for evaluation
-
-def nmse(x_true, x_pred):
-    d = np.mean((x_true - x_pred)**2)
-    n = np.mean(x_true**2)
-    return d/n
-
-
-def psnr(x_true, x_pred):
-    ran = np.amax(x_true) - np.amin(x_true)
-    return 20*np.log(ran) - 10*np.log(np.mean((x_true - x_pred)**2))
-
-
-# ---------------------------
 # Evaluate on test-data
 path = "../data/mayoclinic/data/full3mm/test"
 sigma = 0.2
@@ -61,17 +47,17 @@ PSNR = []
 
 for file in os.listdir(path):
     x = np.load(path + '/' + file)/rescale
-    y_n = operator(x)
+    y_n = RadonSparse(x)
     y_n += np.random.normal(0, 1, y_n.shape)*sigma
     y_n = y_n[None, ..., None]
 
-    y_d = sess.run(out_denois, feed_dict={inp_denois: y_n})
+    y_d = sess.run(out_denoising, feed_dict={inp_denoising: y_n})
     y_u = sess.run(out_up, feed_dict={inp_up: y_d})
-    x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_u, inp_x: np.zeros((1, size, size, 1))})
+    x_rec = sess.run(out_inversion, feed_dict={inp_y: y_u, inp_x: np.zeros((1, size, size, 1))})
     x_rec = x_rec[0, ..., 0]
 
-    NMSE.append(nmse(x, x_rec))
-    PSNR.append(psnr(x, x_rec))
+    NMSE.append(NMSE_numpy(x_rec, x))
+    PSNR.append(PSRN_numpy(x_rec, x))
 
     plt.subplot(221)
     plt.imshow(x, cmap='bone')
@@ -79,7 +65,7 @@ for file in os.listdir(path):
     plt.title('True')
 
     plt.subplot(222)
-    plt.imshow(pseudoinverse(y_n[0, ..., 0]), cmap='bone')
+    plt.imshow(FBPSparse(y_n[0, ..., 0]), cmap='bone')
     plt.axis('off')
     plt.title('FBP')
 
@@ -107,13 +93,13 @@ print(PSNR)
 np.random.seed(1)
 file = np.random.choice(os.listdir(path))
 x = np.load(path + '/' + file)/rescale
-y_n = operator(x)
+y_n = RadonSparse(x)
 y_n += np.random.normal(0, 1, y_n.shape)*sigma
 y_n = y_n[None, ..., None]
 
-y_d = sess.run(out_denois, feed_dict={inp_denois: y_n})
+y_d = sess.run(out_denoising, feed_dict={inp_denoising: y_n})
 y_u = sess.run(out_up, feed_dict={inp_up: y_d})
-x_rec = sess.run(out_inversion, feed_dict={inp_inversion: y_u, inp_x: np.zeros((1, size, size, 1))})
+x_rec = sess.run(out_inversion, feed_dict={inp_y: y_u, inp_x: np.zeros((1, size, size, 1))})
 x_rec = x_rec[0, ..., 0]
 
 plt.imshow(x_rec, cmap='bone')
@@ -124,6 +110,6 @@ plt.imshow(x, cmap='bone')
 plt.axis('off')
 plt.savefig('images/reconstruction_gt.pdf', format='pdf')
 
-plt.imshow(pseudoinverse(y_n[0, ..., 0]), cmap='bone')
+plt.imshow(FBPSparse(y_n[0, ..., 0]), cmap='bone')
 plt.axis('off')
 plt.savefig('images/reconstruction_fbp.pdf', format='pdf')
