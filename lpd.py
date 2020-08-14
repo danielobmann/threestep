@@ -68,7 +68,7 @@ def plot_validation(x_pred, x_true, epoch=10):
 
 
 # ---------------------------
-save_path = "models/lpd_network"
+save_path = "models/lpd/"
 saver = tf.train.Saver()
 n_save = 10
 n_val = 1
