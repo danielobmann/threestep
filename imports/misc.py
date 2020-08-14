@@ -32,9 +32,10 @@ def NMSE(x_result, x_true, name='nmse'):
 
 
 class DataGenerator:
-    def __init__(self, operator, path=data_path, sigma=0.2):
+    def __init__(self, operator, operator_up=None, path=data_path, sigma=0.2):
         self._path = path
         self._operator = operator
+        self._operator_up = operator_up
         self._sigma = sigma
 
     def get_batch(self, batch_size=32, mode='train', rescale=1000.):
@@ -49,5 +50,18 @@ class DataGenerator:
         y_true = np.stack(y_true)[..., None]
         x_true = np.stack(X)[..., None] / rescale
 
+        return y_noisy, y_true, x_true
+
+    def get_batch_upsampling(self, batch_size=32, mode='train', rescale=1000.):
+        p = data_path + mode
+        files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
+        X = [np.load(p + '/' + file) for file in files]
+        y_true = [self._operator_up(x / rescale) for x in X]
+        y_noisy = [self._operator(x / rescale) for x in X]
+        y_noisy = [y + np.random.normal(0, 1, y.shape) * self._sigma for y in y_noisy]
+
+        y_noisy = np.stack(y_noisy)[..., None]
+        y_true = np.stack(y_true)[..., None]
+        x_true = np.stack(X)[..., None] / rescale
         return y_noisy, y_true, x_true
 
