@@ -14,8 +14,8 @@ sess = tf.Session()
 # Specify parameters
 epochs = 21
 batch_size = 2
-n_training_samples = 2# 1709
-n_validation_samples = 2# 458
+n_training_samples = 1709
+n_validation_samples = 458
 n_batches = n_training_samples//batch_size
 n_batches_val = n_validation_samples//batch_size
 
@@ -28,8 +28,7 @@ inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network(
 # ---------------------------
 # Define upsampling network
 
-DCS = DataConsistentNetwork(Radon, Radon.adjoint)
-inp_up, out_up = DCS.network((n_theta, n_s, 1), steps=5, filters=16)
+inp_up, out_up = DataConsistentNetwork(Radon, Radon.adjoint).network((n_theta, n_s, 1), steps=5, filters=16)
 
 y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out_up, y_true))
