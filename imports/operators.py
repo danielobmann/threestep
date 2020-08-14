@@ -16,11 +16,11 @@ detector_partition = odl.uniform_partition(-360, 360, n_s)
 geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
 geometry_up = odl.tomo.Parallel2dGeometry(angle_partition_up, detector_partition)
 
-operator = odl.tomo.RayTransform(space, geometry)
-pseudoinverse = odl.tomo.fbp_op(operator)
+RadonSparse = odl.tomo.RayTransform(space, geometry)
+FBPSparse = odl.tomo.fbp_op(RadonSparse)
 
 Radon = odl.tomo.RayTransform(space, geometry_up)
 FBP = odl.tomo.fbp_op(Radon)
 
-operator /= odl.operator.power_method_opnorm(operator)
+RadonSparse /= odl.operator.power_method_opnorm(RadonSparse)
 Radon /= odl.operator.power_method_opnorm(Radon)
