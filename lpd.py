@@ -4,13 +4,9 @@ sys.path.append('..')
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from tensorflow.keras.layers import Conv2D, BatchNormalization, PReLU, UpSampling2D, Add
-import numpy as np
-import tensorflow as tf
-import odl
 import odl.contrib.tensorflow
 import matplotlib.pyplot as plt
-from datanetwork import *
+from imports.upsamplingnetwork import *
 
 sess = tf.Session()
 

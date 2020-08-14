@@ -7,6 +7,7 @@ from imports.operators import *
 from imports.misc import *
 from imports.denoisingnetwork import *
 from imports.upsamplingnetwork import *
+from imports.inversionnetwork import *
 
 sess = tf.Session()
 
@@ -14,35 +15,34 @@ sess = tf.Session()
 # Specify parameters
 epochs = 21
 batch_size = 2
+batch_size_val = 16
 n_training_samples = 1709
 n_validation_samples = 458
 n_batches = n_training_samples//batch_size
-n_batches_val = n_validation_samples//batch_size
+n_batches_val = n_validation_samples//batch_size_val
 
 initial_lr = 1e-3
 
 restore_path = "models/denoising/"
 
 # ---------------------------
-# Set up denoising network
+# Define networks
 inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network()
-
-# ---------------------------
-# Define upsampling network
-
-inp_up, out_up = DataConsistentNetwork(Radon, Radon.adjoint).network((n_theta, n_s, 1), steps=5, filters=16)
+inp_up, out_up = DataConsistentNetwork(Radon, FBP).network((n_theta, n_s, 1), steps=5, filters=16)
+inp_y, inp_x, out_inversion = InversionNetwork(Radon).network(n_primal=5, n_dual=5, n_iter=5)
 
 y_true = tf.placeholder(shape=(None, n_theta*upsampling_factor, n_s, 1), dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out_up, y_true))
 
-learning_rate = tf.placeholder(dtype=tf.float32, name='lr_upsample')
-opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_upsample')
+learning_rate = tf.placeholder(dtype=tf.float32, name='lr_upsampling')
+opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_upsampling')
 
 train_op = opt.minimize(loss)
 
-# ----------------------------
-# Restore denoising model
 sess.run(tf.global_variables_initializer())
+
+# ----------------------------
+# Restore models
 
 saver = tf.train.import_meta_graph(restore_path + 'denoising_network-20.meta')
 saver.restore(sess, tf.train.latest_checkpoint(restore_path))
@@ -105,8 +105,8 @@ def plot_validation(y_in, y_pred, y_true, epoch=10):
     pass
 
 
-nmse = NMSE(y_true, out_up)
-psnr = PSNR(y_true, out_up)
+nmse = NMSE(out_up, y_true)
+psnr = PSNR(out_up, y_true)
 
 DG = DataGenerator(operator=RadonSparse, operator_up=Radon)
 
@@ -138,7 +138,7 @@ fig.colorbar(im, ax=axs[1, 1])
 im = axs[1, 0].imshow(y_d[0, ..., 0], cmap='bone')
 axs[1, 0].set_aspect(n_s/n_theta)
 axs[1, 0].axis('off')
-axs[1, 0].set_title('True')
+axs[1, 0].set_title('Denoised')
 fig.colorbar(im, ax=axs[1, 0])
 
 plt.savefig("images/UpsamplingInputTest.pdf", format='pdf')
@@ -181,7 +181,7 @@ for epoch in range(epochs):
         NMSE_VAL = []
         PSN_VAL = []
         for j in range(n_batches_val):
-            y_input, y_output, _ = DG.get_batch_upsampling(batch_size=batch_size, mode='val')
+            y_input, y_output, _ = DG.get_batch_upsampling(batch_size=batch_size_val, mode='val')
             y_denois = sess.run(out_denoising, feed_dict={inp_denoising: y_input})
 
             fd = {inp_up: y_denois,

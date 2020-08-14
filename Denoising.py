@@ -73,8 +73,8 @@ def plot_validation(y_in, y_pred, y_true, epoch=10):
     pass
 
 
-nmse = NMSE(y_true, out_denoising)
-psnr = PSNR(y_true, out_denoising)
+nmse = NMSE(out_denoising, y_true)
+psnr = PSNR(out_denoising, y_true)
 
 sess.run(tf.global_variables_initializer())
 
