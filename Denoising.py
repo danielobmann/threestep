@@ -1,15 +1,11 @@
-import sys
-sys.path.append('..')
-
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from tensorflow.keras.layers import Conv2D, BatchNormalization, PReLU, Add
-import numpy as np
-import tensorflow as tf
-import odl
-import odl.contrib.tensorflow
 import matplotlib.pyplot as plt
+
+from imports.operators import *
+from imports.misc import *
+from imports.denoisingnetwork import *
 
 sess = tf.Session()
 
@@ -24,61 +20,15 @@ n_batches_val = n_validation_samples//batch_size
 
 initial_lr = 1e-3
 
-size = 512
-n_theta = 32
-n_s = 768
-
 # ---------------------------
-# Set up tomography operator
+# Define denoising network and set up loss
+inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network()
 
-space = odl.uniform_discr([-128, -128], [128, 128], [size, size], dtype='float32', weighting=1.0)
-angle_partition = odl.uniform_partition(0, np.pi, n_theta)
-detector_partition = odl.uniform_partition(-360, 360, n_s)
-geometry = odl.tomo.Parallel2dGeometry(angle_partition, detector_partition)
+y_true = tf.placeholder(shape=(None, n_theta, n_s, 1), dtype=tf.float32)
+loss = tf.reduce_mean(tf.squared_difference(out_denoising, y_true))
 
-operator = odl.tomo.RayTransform(space, geometry)
-pseudoinverse = odl.tomo.fbp_op(operator)
-
-operator /= odl.operator.power_method_opnorm(operator)
-
-# Create tensorflow layer from odl operator
-odl_op_layer = odl.contrib.tensorflow.as_tensorflow_layer(operator, 'RayTransform')
-odl_op_layer_pseudo = odl.contrib.tensorflow.as_tensorflow_layer(pseudoinverse, 'RayTransformPseudo')
-
-# ---------------------------
-# Define denoising architecture
-inp_shape = operator.range.shape + (1, )
-
-inp = tf.placeholder(tf.float32, shape=(None,) + inp_shape, name='input_denoising')
-
-out = Conv2D(64, (3, 3), padding='same')(inp)
-out = PReLU()(out)
-
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
-out = Conv2D(64, (3, 3), padding='same')(out)
-out = PReLU()(out)
-
-out = Conv2D(1, (1, 1), padding='same')(out)
-out = Add()([out, inp])
-
-# Make output operator consistent
-out = odl_op_layer_pseudo(out)
-
-out = Conv2D(64, (10, 10), padding='same')(out)
-out = Conv2D(1, (1, 1), padding='same')(out)
-
-out = odl_op_layer(out)
-out = tf.identity(out, name='output_denoising')
-
-# ---------------------------
-# Set up loss function for training
-y_true = tf.placeholder(shape=(None,) + inp_shape, dtype=tf.float32)
-loss = tf.reduce_mean(tf.squared_difference(out, y_true))
-
-learning_rate = tf.placeholder(dtype=tf.float32)
-opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+learning_rate = tf.placeholder(dtype=tf.float32, name='lr_denoising')
+opt = tf.train.AdamOptimizer(learning_rate=learning_rate, name='adam_denoising')
 
 train_op = opt.minimize(loss)
 
@@ -119,42 +69,12 @@ def plot_validation(y_in, y_pred, y_true, epoch=10):
     pass
 
 
-def cosine_decay(epoch, total, initial=1e-3):
-    return initial/2.*(1 + np.cos(np.pi*epoch/total))
+nmse = NMSE(y_true, out_denoising)
+psnr = PSNR(y_true, out_denoising)
 
+sess.run(tf.global_variables_initializer())
 
-def log10(x):
-    numerator = tf.log(x)
-    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
-    return numerator / denominator
-
-
-def PSNR(x_result, x_true, name='psnr'):
-    with tf.name_scope(name):
-        maxval = tf.reduce_max(x_true) - tf.reduce_min(x_true)
-        mse = tf.reduce_mean((x_result - x_true) ** 2)
-
-        return 20 * log10(maxval) - 10 * log10(mse)
-
-
-nmse = tf.reduce_mean(tf.reduce_sum(tf.square(y_true - out), axis=[1, 2, 3])/tf.reduce_sum(y_true**2, axis=[1, 2, 3]))
-psnr = PSNR(y_true, out)
-
-# ---------------------------
-data_path = "../data/mayoclinic/data/full3mm/"
-sigma = 0.2
-
-
-def data_generator(batch_size=32, mode='train', rescale=1000.):
-    p = data_path + mode
-    files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
-    X = [np.load(p + '/' + file) for file in files]
-    y_true = [operator(x/rescale) for x in X]
-    y_noisy = [y + np.random.normal(0, 1, y.shape)*sigma for y in y_true]
-    y_true = np.stack(y_true)[..., None]
-    y_noisy = np.stack(y_noisy)[..., None]
-    return y_noisy, y_true
-
+DG = DataGenerator(RadonSparse)
 
 # ---------------------------
 save_path = "models/denoising/denoising_network"
@@ -163,46 +83,39 @@ n_val = 1
 n_plot = 5
 
 print("Initialization successful. Starting training...", flush=True)
-
-
-sess.run(tf.global_variables_initializer())
-hist = {'loss': [], 'nmse': [], 'loss_val': [], 'nmse_val': []}
 saver = tf.train.Saver()
 
 
-for i in range(epochs):
+for epoch in range(epochs):
     ERR = []
-    NMSE = []
-    PSN = []
+    NMSE_train = []
+    PSNR_train = []
 
-    print("### Epoch %d/%d ###" % (i + 1, epochs))
+    print("### Epoch %d/%d ###" % (epoch + 1, epochs))
     for j in range(n_batches):
-        print("Progress %f, Loss %f" % ((j+1)/n_batches, np.mean(ERR)), end='\r', flush=True)
-        y_input, y_output = data_generator(batch_size=batch_size, mode='train')
+        y_input, y_output, _ = DG.get_batch(batch_size=batch_size, mode='train')
 
-        fd = {inp: y_input,
+        fd = {inp_denoising: y_input,
               y_true: y_output,
-              learning_rate: cosine_decay(i, epochs)}
+              learning_rate: cosine_decay(epoch, epochs)}
 
         c, nm, ps, _ = sess.run([loss, nmse, psnr, train_op], feed_dict=fd)
-        NMSE.append(nm)
-        PSN.append(ps)
+        NMSE_train.append(nm)
+        PSNR_train.append(ps)
         ERR.append(c)
+        print("Progress %f, Loss %f" % ((j + 1) / n_batches, np.mean(ERR)), end='\r', flush=True)
 
-    print("   Training: Loss %f NMSE %f PSNR %f" % (np.mean(ERR), np.mean(NMSE), np.mean(PSN)), end='\r', flush=True)
-    hist['loss'].append(np.mean(ERR))
-    hist['nmse'].append(np.mean(NMSE))
-
+    print("Training: Loss %f NMSE %f PSNR %f" % (np.mean(ERR), np.mean(NMSE_train), np.mean(PSNR_train)), end='\r')
 
     # Validate model performance
-    if i % n_val == 0:
+    if epoch % n_val == 0:
         ERR_VAL = []
         NMSE_VAL = []
         PSN_VAL = []
         for j in range(n_batches_val):
-            y_input, y_output = data_generator(batch_size=batch_size, mode='val')
+            y_input, y_output, _ = DG.get_batch(batch_size=batch_size, mode='val')
 
-            fd = {inp: y_input,
+            fd = {inp_denoising: y_input,
                   y_true: y_output}
 
             c, nm, ps = sess.run([loss, nmse, psnr], feed_dict=fd)
@@ -210,25 +123,18 @@ for i in range(epochs):
             PSN_VAL.append(ps)
             NMSE_VAL.append(nm)
         print(" ")
-        print("   Validation: Loss %f Validation NMSE %f PSNR %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL), np.mean(PSN_VAL)))
+        print("   Validation: Loss %f NMSE %f PSNR %f" % (np.mean(ERR_VAL), np.mean(NMSE_VAL), np.mean(PSN_VAL)))
         print(" ", flush=True)
-        hist['loss_val'].append(np.mean(ERR_VAL))
-        hist['nmse_val'].append(np.mean(NMSE_VAL))
 
-    if (i % n_plot) == 0:
-        y_input, y_output = data_generator(batch_size=batch_size, mode='val')
+    if (epoch % n_plot) == 0:
+        y_input, y_output, _ = DG.get_batch(batch_size=batch_size, mode='val')
 
-        fd = {inp: y_input,
+        fd = {inp_denoising: y_input,
               y_true: y_output}
 
-        y_pred = sess.run(out, feed_dict=fd)
-        plot_validation(y_input, y_pred, y_output, epoch=i)
+        y_pred = sess.run(out_denoising, feed_dict=fd)
+        plot_validation(y_input, y_pred, y_output, epoch=epoch)
 
     # Save model every
-    if (i % n_save) == 0:
-        saver.save(sess, save_path, global_step=i)
-
-
-plt.semilogy(hist['loss'])
-plt.semilogy(hist['loss_val'])
-plt.savefig('images/denoising_loss.pdf', format='pdf')
+    if (epoch % n_save) == 0:
+        saver.save(sess, save_path, global_step=epoch)
