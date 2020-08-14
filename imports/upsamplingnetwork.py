@@ -29,13 +29,14 @@ class DataConsistentNetwork:
         return inp, out, y0
 
     @staticmethod
-    def _convolution_block(out, global_step, steps=2, filters=32, kernel_size=(3, 3), batch=False):
+    def _convolution_block(out, global_step, steps=2, filters=32, kernel_size=(3, 3), batch=False, act=True):
 
         for step in range(steps):
             out = Conv2D(filters, kernel_size, padding='same')(out)
             if batch:
                 out = BatchNormalization(name='batch_dcs_' + str(global_step) + '_' + str(step))(out)
-            out = PReLU()(out)
+            if act:
+                out = PReLU()(out)
 
         return out
 
@@ -57,7 +58,7 @@ class DataConsistentNetwork:
         # Enforce operator consistency
         out = self._pseudoinverse_tensorflow(out)
 
-        out = self._convolution_block(out, global_step=global_step+100, filters=filters, kernel_size=kernel_size, batch=batch)
+        out = self._convolution_block(out, global_step=global_step+100, filters=64, kernel_size=(10, 10), batch=batch, act=False)
         out = Conv2D(1, (1, 1), padding='same')(out)
 
         out = self._operator_tensorflow(out)
