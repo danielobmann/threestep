@@ -13,7 +13,7 @@ sess = tf.Session()
 
 # ---------------------------
 # Specify parameters
-epochs = 21
+epochs = 11
 batch_size = 2
 batch_size_val = 16
 n_training_samples = 1709
@@ -146,7 +146,7 @@ plt.clf()
 
 # ---------------------------
 save_path = "models/upsampling/upsampling_network"
-n_save = 10
+n_save = 5
 n_val = 1
 n_plot = 1
 
