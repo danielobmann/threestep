@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from imports.operators import *
 from imports.misc import *
 from imports.denoisingnetwork import *
+from imports.upsamplingnetwork import *
+from imports.inversionnetwork import *
 
 sess = tf.Session()
 
@@ -21,8 +23,10 @@ n_batches_val = n_validation_samples//batch_size
 initial_lr = 1e-3
 
 # ---------------------------
-# Define denoising network and set up loss
+# Define networks
 inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network()
+inp_up, out_up = DataConsistentNetwork(Radon, FBP).network((n_theta, n_s, 1), steps=5, filters=16)
+inp_y, inp_x, out_inversion = InversionNetwork(Radon).network(n_primal=5, n_dual=5, n_iter=5)
 
 y_true = tf.placeholder(shape=(None, n_theta, n_s, 1), dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out_denoising, y_true))
