@@ -23,7 +23,8 @@ n_batches_val = n_validation_samples//batch_size_val
 
 initial_lr = 1e-3
 
-restore_path = "models/denoising_residual/"
+# restore_path = "models/denoising_residual/"
+restore_path = "models/upsampling_residual/"
 
 # ---------------------------
 # Define networks
@@ -44,7 +45,7 @@ sess.run(tf.global_variables_initializer())
 # ----------------------------
 # Restore models
 
-saver = tf.train.import_meta_graph(restore_path + 'denoising_network-4.meta')
+saver = tf.train.import_meta_graph(restore_path + 'upsampling_network-0.meta')
 saver.restore(sess, tf.train.latest_checkpoint(restore_path))
 
 # ---------------------------
