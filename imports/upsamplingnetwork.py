@@ -111,13 +111,23 @@ class DataConsistentNetwork:
         out = tf.identity(out, name='output_upsample')
         return inp, out
 
-    def network_residual(self, inp_shape, steps=3, filters=32, kernel_size=(3, 3), batch=True):
+    def network_residual(self, inp_shape, steps=3, filters=32, kernel_size=(3, 3), consistency='operator'):
         inp, u0, y0 = self.input_layer(inp_shape)
         out = u0
 
         # Go in steps of 2 to have a unique global step
         for i in range(0, 2*steps, 2):
-            u0, out, y0 = self._data_consistency_block_residual(u0, out, y0, global_step=i, filters=filters, kernel_size=kernel_size)
-            u0, out, y0 = self._operator_consistency_block_residual(u0, out, y0, global_step=i+1, filters=filters, kernel_size=kernel_size)
+            if consistency == 'operator':
+                u0, out, y0 = self._data_consistency_block_residual(u0, out, y0, global_step=i, filters=filters,
+                                                                    kernel_size=kernel_size)
+                u0, out, y0 = self._operator_consistency_block_residual(u0, out, y0, global_step=i+1, filters=filters,
+                                                                        kernel_size=kernel_size)
+            elif consistency == 'data':
+                u0, out, y0 = self._operator_consistency_block_residual(u0, out, y0, global_step=i + 1, filters=filters,
+                                                                        kernel_size=kernel_size)
+                u0, out, y0 = self._data_consistency_block_residual(u0, out, y0, global_step=i, filters=filters,
+                                                                    kernel_size=kernel_size)
+            else:
+                ValueError('Unknown consistency type.')
         out = tf.identity(out, name='output_upsample')
         return inp, out
