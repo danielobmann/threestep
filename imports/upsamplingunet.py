@@ -61,7 +61,8 @@ class UNetUpsampling:
 
         out = self._pseudoinverse_tensorflow(out)
 
-        out = Conv2D(64, (10, 10), padding='same')(out)
+        out = Conv2D(64, (10, 10), padding='same', activation='relu')(out)
+        out = Conv2D(64, (10, 10), padding='same', activation='relu')(out)
         out = Conv2D(1, (1, 1), padding='same')(out)
 
         out = self._operator_tensorflow(out)

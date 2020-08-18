@@ -14,7 +14,7 @@ sess = tf.Session()
 # ---------------------------
 # Specify parameters
 epochs = 5
-batch_size = 4
+batch_size = 8
 batch_size_val = 16
 n_training_samples = 1709
 n_validation_samples = 458
@@ -225,7 +225,7 @@ for epoch in range(epochs):
 # -----------------------------------
 # Start inversion training
 
-batch_size = 1
+batch_size = 2
 n_batches = n_training_samples//batch_size
 n_batches_val = n_validation_samples//batch_size
 
