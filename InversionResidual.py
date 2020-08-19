@@ -14,7 +14,7 @@ sess = tf.Session()
 # ---------------------------
 # Specify parameters
 epochs = 10
-batch_size = 1
+batch_size = 2
 n_training_samples = 1709
 n_validation_samples = 458
 n_batches = n_training_samples//batch_size
@@ -192,7 +192,7 @@ for epoch in range(epochs):
 # ------------------------
 # Plot one specific example for paper
 rescale = 1000.
-sigma = 0.2
+sigma = 0.05
 
 np.random.seed(1)
 file = np.random.choice(os.listdir(data_path))
