@@ -26,7 +26,7 @@ initial_lr = 1e-3
 # ---------------------------
 # Define networks
 inp_denoising, out_denoising = DenoisingNetwork(RadonSparse, FBPSparse).network()
-inp_up, out_up = DataConsistentNetwork(Radon, FBP).network_residual((n_theta, n_s, 1), steps=3, filters=32, batch=True)
+inp_up, out_up = DataConsistentNetwork(Radon, FBP).network_residual((n_theta, n_s, 1), steps=3, filters=32)
 inp_y, inp_x, out_inversion = InversionNetwork(Radon).network(n_primal=5, n_dual=5, n_iter=5)
 
 y_true = tf.placeholder(shape=(None, n_theta, n_s, 1), dtype=tf.float32)
