@@ -4,11 +4,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from imports.operators import *
 from imports.misc import *
 
+import matplotlib.pyplot as plt
+
 # ----------------------------
 # Plot examples
 
-path = "../data/mayoclinic/data/full3mm/test"
-sigma = 0.2
+path = "../../data/mayoclinic/data/full3mm/test"
+sigma = 0.02
 rescale = 1000.
 
 NMSE = []
@@ -18,10 +20,26 @@ for file in os.listdir(path):
     x = np.load(path + '/' + file)/rescale
     y_n = RadonSparse(x)
     y_n += np.random.normal(0, 1, y_n.shape)*sigma
-    x_rec = FBPSparse(y_n)
+    x_rec = FBPSparse(y_n)*c
 
-    NMSE.append(NMSE_numpy(x_rec, x))
-    PSNR.append(PSRN_numpy(x_rec, x))
+    plt.subplot(121)
+    plt.imshow(x, cmap='bone')
+    plt.axis('off')
+    plt.colorbar()
 
-print(NMSE)
-print(PSNR)
+    plt.subplot(122)
+    plt.imshow(x_rec, cmap='bone')
+    plt.axis('off')
+    plt.colorbar()
+
+    plt.savefig("images/fbp/" + file + ".pdf")
+    plt.clf()
+
+    NMSE.append(NMSE_numpy(x, x_rec))
+    PSNR.append(PSRN_numpy(x, x_rec))
+
+
+with open("results/fbp.txt", "w") as f:
+    f.writelines(str(NMSE))
+    f.write("\n")
+    f.writelines(str(PSNR))
