@@ -133,6 +133,13 @@ for epoch in range(epochs):
         saver.save(sess, save_path, global_step=epoch)
 
 
+plt.semilogy(ERR, label='train')
+plt.semilogy(ERR_VAL, label='val')
+plt.legend()
+plt.savefig("images/lpd_error.pdf")
+plt.clf()
+
+
 # ------------------------
 # Plot one specific example for paper
 
