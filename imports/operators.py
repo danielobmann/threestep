@@ -2,8 +2,8 @@ import odl
 import numpy as np
 
 size = 512
-n_theta = 32
-upsampling_factor = 23
+n_theta = 60
+upsampling_factor = 10
 n_s = 768
 
 # ---------------------------

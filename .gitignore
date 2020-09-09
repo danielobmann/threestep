@@ -6,3 +6,6 @@
 # images
 *.pdf
 *.png
+
+models/
+images/

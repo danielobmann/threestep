@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 
-data_path = "../data/mayoclinic/data/full3mm/"
+data_path = "../../data/mayoclinic/data/full3mm/"
 
 
 def cosine_decay(epoch, total, initial=1e-3):
@@ -44,7 +44,7 @@ def NMSE_numpy(x_result, x_true):
 
 
 class DataGenerator:
-    def __init__(self, operator, operator_up=None, path=data_path, sigma=0.2):
+    def __init__(self, operator, operator_up=None, path=data_path, sigma=0.02):
         self._path = path
         self._operator = operator
         self._operator_up = operator_up
