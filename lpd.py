@@ -23,7 +23,7 @@ initial_lr = 1e-3
 
 # ---------------------------
 # Set up network
-inp_y, inp_x, out_inversion = InversionNetwork(Radon).network(n_primal=5, n_dual=5, n_iter=5)
+inp_y, inp_x, out_inversion = InversionNetwork(RadonSparse).network(n_primal=5, n_dual=5, n_iter=5)
 
 x_true = tf.placeholder(shape=(None, size, size, 1), dtype=tf.float32)
 loss = tf.reduce_mean(tf.squared_difference(out_inversion, x_true))
@@ -144,7 +144,7 @@ plt.clf()
 # Plot one specific example for paper
 
 path = "../data/mayoclinic/data/full3mm/test"
-sigma = 0.2
+sigma = 0.02
 rescale = 1000.
 
 

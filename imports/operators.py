@@ -22,5 +22,6 @@ FBPSparse = odl.tomo.fbp_op(RadonSparse)
 Radon = odl.tomo.RayTransform(space, geometry_up)
 FBP = odl.tomo.fbp_op(Radon)
 
-RadonSparse /= odl.operator.power_method_opnorm(RadonSparse)
-Radon /= odl.operator.power_method_opnorm(Radon)
+c = odl.operator.power_method_opnorm(RadonSparse)
+RadonSparse /= c
+Radon /= c
