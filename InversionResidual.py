@@ -189,6 +189,13 @@ for epoch in range(epochs):
         saver.save(sess, save_path, global_step=epoch)
 
 
+plt.semilogy(ERR, label='train')
+plt.semilogy(ERR_VAL, label='val')
+plt.legend()
+plt.savefig("images/inversion_error.pdf")
+plt.clf()
+
+
 # ------------------------
 # Plot one specific example for paper
 rescale = 1000.
@@ -196,7 +203,7 @@ sigma = 0.05
 
 np.random.seed(1)
 file = np.random.choice(os.listdir(data_path))
-x = np.load(data_path + '/' + file)/rescale
+x = np.load(data_path + file)/rescale
 y_n = RadonSparse(x)
 y_n += np.random.normal(0, 1, y_n.shape)*sigma
 y_n = y_n[None, ..., None]
