@@ -52,7 +52,10 @@ class DataGenerator:
 
     def get_batch(self, batch_size=32, mode='train', rescale=1000.):
         p = data_path + mode
-        files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
+        if batch_size is None:
+            files = os.listdir(p)
+        else:
+            files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
         X = [np.load(p + '/' + file) for file in files]
         y_true = [self._operator(x / rescale) for x in X]
         y_noisy = [y + np.random.normal(0, 1, y.shape) * self._sigma for y in y_true]
@@ -66,7 +69,10 @@ class DataGenerator:
 
     def get_batch_upsampling(self, batch_size=32, mode='train', rescale=1000.):
         p = data_path + mode
-        files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
+        if batch_size is None:
+            files = os.listdir(p)
+        else:
+            files = np.random.choice(os.listdir(p), size=batch_size, replace=False)
         X = [np.load(p + '/' + file) for file in files]
         y_true = [self._operator_up(x / rescale) for x in X]
         y_noisy = [self._operator(x / rescale) for x in X]
