@@ -7,10 +7,11 @@
 *.pdf
 *.png
 
+# folders
 models/
 images/
-
 .idea/
 old/
 results/
+jupyter/
 
