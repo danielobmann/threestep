@@ -7,6 +7,8 @@
 *.pdf
 *.png
 
+*.pyc
+
 # folders
 models/
 images/
@@ -14,4 +16,5 @@ images/
 old/
 results/
 jupyter/
+!**/__pycache__/
 
