@@ -56,8 +56,10 @@ def sob_loss(y_true, y_pred, srange=[-360, 360], beta=0.5):
     y = tf.cast(y_true - y_pred, tf.complex64)
     y = tf.squeeze(y)
     y = tf.fft(y)
+    # FFT shift for correct multiplication
+    y = tf.roll(y, shift=int(y_true.shape[-2]//2), axis=-1)
     y = tf.square(tf.abs(y))
-    s = sob_weight(shape = tf.keras.backend.int_shape(y_true)[1:3], srange=srange, beta=beta)
+    s = sob_weight(shape=tf.keras.backend.int_shape(y_true)[1:3], srange=srange, beta=beta)
     s = tf.constant(s, tf.float32)
     y = y*s
     return tf.reduce_mean(y)
